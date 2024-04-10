@@ -51,25 +51,31 @@ def logout():
 def profile():
     if 'username' in session:
         username = session['username']
-        response = requests.get('http://127.0.0.1:5000/api/profile', json={'username': username})
-        
+        if request.method == 'POST':
+            name = request.form.get('name')
+            email = request.form.get('email')
+            bio = request.form.get('bio')
+
+            print("Data to be updated:", username, name, email, bio)
+            
+            response = requests.post('http://127.0.0.1:5000/api/profile/update', json={'username': username, 'name': name, 'email': email, 'bio': bio})
+
+            if response.status_code == 200:
+                flash('Profile updated successfully.', 'success')
+            else:
+                flash('Failed to update profile.', 'error')
+
+        # Send a GET request to fetch user data
+        response = requests.post('http://127.0.0.1:5000/api/profile', json={'username': username})
+
         if response.status_code == 200:
             user_data = response.json()
+            print("data from API: ", user_data)
             name = user_data[0]
-
-            if request.method == 'POST':
-                name = request.form.get('name')
-                email = request.form.get('email')
-                bio = request.form.get('bio')
-                
-                response = requests.post('http://127.0.0.1:5000/api/profile/update', json={'username': username, 'name': name, 'email': email, 'bio': bio})
-
-                if response.status_code == 200:
-                    flash('Profile updated successfully.', 'success')
-                else:
-                    flash('Failed to update profile.', 'error')
-                    
-            return render_template('profile.html', username=username, name=name, email=user_data[1], bio=user_data[2])
+            email = user_data[4]
+            bio = user_data[5]
+            
+            return render_template('profile.html', username=username, name=name, email=email, bio=bio)
         else:
             flash('Failed to fetch user data.', 'error')
             return render_template('profile.html', username=username)  

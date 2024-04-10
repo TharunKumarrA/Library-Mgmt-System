@@ -70,21 +70,20 @@ def register():
         print(f"An error occurred: {e}")
         abort(500)
 
-@ep.route('/api/profile', methods=['GET'])
+@ep.route('/api/profile', methods=['GET', 'POST'])
 def get_user_data():
     try:
         conn = sqlite3.connect(database)
         cursor = conn.cursor()
         
         # Get JSON data
-        data = request.get_json()
+        data = request.json
         if not data or 'username' not in data:
             abort(400)
         
         username = data.get('username')
         cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
         user_data = cursor.fetchone()
-        print("User data from db for profile: ", user_data)
         cursor.close()
         conn.close()
 
@@ -100,7 +99,7 @@ def get_user_data():
 @ep.route('/api/profile/update', methods=['POST'])
 def update_profile():
     try:
-        data = request.get_json()
+        data = request.json
         if not data or 'username' not in data or 'name' not in data or 'email' not in data or 'bio' not in data:
             abort(400)
         
@@ -108,6 +107,8 @@ def update_profile():
         name = data.get('name')
         email = data.get('email')
         bio = data.get('bio')
+
+        print("Data received:", username, name, email, bio)  # Print received data for debugging
 
         conn = sqlite3.connect(database)
         cursor = conn.cursor()
