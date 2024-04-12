@@ -1,15 +1,25 @@
 from flask import Flask, render_template, request, session, Blueprint, redirect, url_for, flash
-import sqlite3
+from datetime import datetime, timedelta
 import requests
 
 render = Blueprint('render', __name__)
 
 @render.route('/')
 def index():
-    logged_in = 'username' in session
-    if logged_in and session['username'][1]:
-        return redirect('/admin')
-    return render_template('basewithnav.html', logged_in=logged_in)
+    if 'username' in session:
+        logged_in = True
+        username = session['username'][0]
+        is_admin = session['username'][1]
+        if is_admin:
+            return redirect('/admin')
+        else:
+            response = requests.get(f'http://127.0.0.1:5000/api/books/borrowed/{username}')
+            borrowed_books = response.json()
+            print("borrowed_books: ", borrowed_books)
+            return render_template('home.html', logged_in=logged_in, username=username, borrowed_books=borrowed_books)
+    else:
+        return redirect('/login')
+
 
 @render.route('/login', methods=['GET', 'POST'])
 def render_login_page():
@@ -209,9 +219,96 @@ def manage_users():
     if 'username' in session:
         username = session['username'][0]
 
-        respose = requests.get('http://127.0.0.1:5000/api/manage/users')
-        users = respose.json()
-        print(users)
-        return render_template('manageusers.html', users=users)
+        # Fetch users data
+        response_users = requests.get('http://127.0.0.1:5000/api/manage/users')
+        users = response_users.json()
+
+        # Fetch borrowed books data for each user
+        borrows_data = []
+        for user in users:
+            user_id = user[0]
+            response_borrows = requests.get(f'http://127.0.0.1:5000/api/books/borrowed/{user_id}')
+            try:
+                borrows = response_borrows.json()
+            except ValueError:
+                print("Response is not in valid JSON format")
+                borrows = []
+            borrows_data.append((user_id, borrows))
+
+        return render_template('manageusers.html', users=users, borrows_data=borrows_data)
+    else:
+        return redirect('/login')
+    
+@render.route('/requests', methods=['GET', 'POST'])
+def requests_page():
+    if 'username' in session:
+        username = session['username'][0]
+
+        if request.method == 'POST':
+            request_id = request.form.get('request_id')
+
+            response = requests.post('http://127.0.0.1:5000/api/issue', json={'request_id': request_id})
+
+        # Fetch requests data
+        response = requests.get('http://127.0.0.1:5000/api/requests', json={'username': username})
+        requests_data = response.json()
+        print("requests_data: ", requests_data)
+    
+        if response.status_code == 200:
+            flash('Requests fetched successfully.', 'success')
+        else:
+            flash('Failed to fetch requests.', 'error')
+
+        return render_template('requests.html', requests=requests_data)
+    else:
+        return redirect('/login')
+
+
+    
+@render.route('/books', methods=['GET', 'POST'])
+def books():
+    if 'username' in session:
+        if request.method == 'POST':
+            # Ensure the user is logged in
+            if 'username' not in session:
+                flash('Please log in to request books.', 'error')
+                return redirect('/login')
+
+            # Get form data
+            book_id = request.form.get('book_id')
+            username = session['username'][0]
+            current_date = datetime.now().strftime('%d-%m-%Y')
+            till_date = (datetime.now() + timedelta(days=14)).strftime('%d-%m-%Y')
+
+            print("book_id: ", book_id, "username: ", username, "start_date: ", current_date, "end_date: ", till_date)
+
+            # Make request to API endpoint
+            response = requests.post('http://127.0.0.1:5000/api/books/request', json={'book_id': book_id, 'username': username, 'start_date': current_date, 'end_date': till_date})
+
+            # Check if request was successful
+            if response.status_code == 200:
+                flash('Book requested successfully.', 'success')
+            else:
+                flash('Failed to request book.', 'error')
+
+        # Get current date and till date
+        current_date = datetime.now().strftime('%d-%m-%Y')
+        till_date = (datetime.now() + timedelta(days=14)).strftime('%d-%m-%Y')
+
+        # Make request to API to get book data
+        response = requests.get('http://127.0.0.1:5000/api/books')
+
+        # Check if request was successful
+        if response.status_code != 200:
+            flash('Failed to fetch books data.', 'error')
+            return redirect('/')
+
+        # Render template with book data
+        books = response.json()
+        return render_template('books.html', books=books, current_date=current_date, till_date=till_date)
+    else:
+        flash('Please log in to view books.', 'error')
+        return redirect('/login')
+
 if __name__ == '__main__':
     render.run(debug=True)

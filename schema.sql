@@ -26,3 +26,14 @@ CREATE TABLE IF NOT EXISTS sections (
     description TEXT,
     CONSTRAINT name_unique UNIQUE (name)
 );
+
+CREATE TABLE IF NOT EXISTS borrows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    book_id INTEGER NOT NULL,
+    borrow_date TEXT NOT NULL,
+    return_date TEXT NOT NULL,
+    status INTEGER NOT NULL,
+    CONSTRAINT user_fk FOREIGN KEY (username) REFERENCES users(username),
+    CONSTRAINT book_fk FOREIGN KEY (book_id) REFERENCES books(id)
+);

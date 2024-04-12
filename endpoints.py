@@ -284,6 +284,140 @@ def manage_books():
         print(f"An error occurred: {e}")
         return 'Internal Server Error', 500
 
+@ep.route('/api/manage/users', methods=['GET', 'POST'])
+def manage_users():
+    try:
+        conn = sqlite3.connect(database)
+        cursor = conn.cursor()
+
+        if request.method == 'GET':
+            cursor.execute("SELECT * FROM users WHERE isAdmin IS NULL")
+            users = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            return jsonify(users), 200
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'Internal Server Error', 500
+    
+@ep.route('/api/issue', methods=['POST', 'GET'])
+def issue_book():
+    try:
+        data = request.json
+        if not data or 'request_id' not in data:
+            abort(400)
+
+        request_id = data.get('request_id')
+
+        conn = sqlite3.connect(database)
+        cursor = conn.cursor()
+
+        # Update the status of the borrow record to 1 (issued)
+        cursor.execute('UPDATE borrows SET status = 1 WHERE id = ?', (request_id,))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return 'Book issued successfully', 200
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'Internal Server Error', 500
+    
+@ep.route('/api/revoke/<username>/<int:book_id>', methods=['POST', 'GET'])
+def revoke_book(username, book_id):
+    try:
+        if not username or not book_id:
+            abort(400)
+
+        conn = sqlite3.connect(database)
+        cursor = conn.cursor()
+
+        cursor.execute('DELETE FROM borrows WHERE username = ? AND book_id = ?', (username, book_id))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return 'Book revoked successfully', 200
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'Internal Server Error', 500
+    
+@ep.route('/api/requests', methods=['GET'])
+def get_requests():
+    try:
+        conn = sqlite3.connect(database)
+        cursor = conn.cursor()
+
+        # Fetch requests where status is 0 (pending) along with book information
+        cursor.execute('''
+            SELECT borrows.id, borrows.username, borrows.book_id, borrows.borrow_date, borrows.return_date, borrows.status,
+                   books.title, books.author, books.copies
+            FROM borrows
+            JOIN books ON borrows.book_id = books.id
+            WHERE borrows.status = 0
+        ''')
+        requests_data = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(requests_data), 200
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'Internal Server Error', 500
+    
+@ep.route('/api/books/borrowed/<string:username>', methods=['GET'])
+def borrowed_books(username):
+    try:
+        # Extract user ID from URL parameters
+        # user_id = request.args.get('user_id')  # Use this line if using query parameters in the URL
+
+        if username is None:
+            abort(400)
+
+        conn = sqlite3.connect(database)
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT books.id, books.title, books.author FROM borrows JOIN books ON borrows.book_id = books.id WHERE borrows.username = ? and borrows.status = 1', (username,)) # Get all borrowed books
+        borrowed_books = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(borrowed_books), 200
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'Internal Server Error', 500
+    
+@ep.route('/api/books/request', methods=['POST', 'GET'])
+def book_request():
+    try:
+        data = request.json
+        if not data or 'username' not in data or 'book_id' not in data or 'end_date' not in data or 'start_date' not in data:
+            abort(400)
+
+        username = data.get('username')
+        book_id = data.get('book_id')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+
+        conn = sqlite3.connect(database)
+        cursor = conn.cursor()
+
+        cursor.execute('INSERT INTO borrows (username, book_id, borrow_date, return_date, status) VALUES (?, ?, ?, ?, ?)', (username, book_id, start_date, end_date, 0))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return 'Request submitted successfully', 200
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'Internal Server Error', 500
+
     
 if __name__ == '__main__':
     ep.run(debug=True)

@@ -20,7 +20,9 @@ body %}
             alt="Manage Books"
           />
           <h5 class="card-title">Manage Books</h5>
-          <a href="{{ url_for('render.manage_books') }}" class="btn btn-primary">Go to Manage Books</a>
+          <a href="{{ url_for('render.manage_books') }}" class="btn btn-primary"
+            >Go to Manage Books</a
+          >
         </div>
       </div>
     </div>
@@ -50,7 +52,9 @@ body %}
             alt="Manage Users"
           />
           <h5 class="card-title">Manage Users</h5>
-          <a href="#" class="btn btn-primary">Go to Manage Users</a>
+          <a href="{{ url_for('render.manage_users') }}" class="btn btn-primary"
+            >Go to Manage Users</a
+          >
         </div>
       </div>
     </div>
@@ -63,7 +67,11 @@ body %}
             alt="Manage Requests"
           />
           <h5 class="card-title">Manage Requests</h5>
-          <a href="#" class="btn btn-primary">Go to Manage Requests</a>
+          <a
+            href="{{ url_for('render.requests_page') }}"
+            class="btn btn-primary"
+            >Go to Manage Requests</a
+          >
         </div>
       </div>
     </div>
