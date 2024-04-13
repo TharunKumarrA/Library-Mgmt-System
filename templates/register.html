@@ -1,0 +1,91 @@
+{% extends "base.html" %} {% block title %}Register{% endblock %} {% block body
+%}
+<body>
+  <div class="container">
+    <div class="row justify-content-center mt-5">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">Register</div>
+          <div class="card-body">
+            <form id="loginForm" method="post" onsubmit="return validateForm()">
+              <div class="form-group">
+                <label for="username">Username:</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="username"
+                  name="username"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="name">Name:</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="name"
+                  name="name"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="password">Password:</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="password"
+                  name="password"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="confirmPassword">Confirm Password:</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <input type="checkbox" id="isAdmin" name="isAdmin" />
+                <label for="isAdmin">Admin</label>
+              </div>
+              <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+<script>
+  function validateForm() {
+    var username = document.getElementById("username").value;
+    var name = document.getElementById("name").value;
+    var password = document.getElementById("password").value;
+
+    if (!username || !name || !password) {
+      alert("Please enter all fields.");
+      return false;
+    }
+    return true;
+  }
+
+  document
+    .getElementById("confirmPassword")
+    .addEventListener("input", function () {
+      var password = document.getElementById("password").value;
+      var confirmPassword = document.getElementById("confirmPassword").value;
+      var submitButton = document.querySelector("button[type='submit']");
+
+      if (password === confirmPassword) {
+        submitButton.disabled = false;
+      } else {
+        submitButton.disabled = true;
+      }
+    });
+</script>
+{% endblock %}

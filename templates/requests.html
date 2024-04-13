@@ -1,0 +1,50 @@
+{% extends 'basewithnav.html' %} {% block title %}Book Requests{% endblock %} {%
+block body %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<div class="container">
+  <h1>Book Requests</h1>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Title</th>
+        <th>Author</th>
+        <th>Borrow Date</th>
+        <th>Return Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for request in requests %}
+      <tr>
+        <td>{{ request[1] }}</td>
+        <td>{{ request[6] }}</td>
+        <td>{{ request[7] }}</td>
+        <td>{{ request[3] }}</td>
+        <td>{{ request[4] }}</td>
+        <td>
+          <form method="POST" id="issueform{{ request[1] }}-{{ request[2] }}">
+            <input type="hidden" name="username" value="{{ request[1] }}" />
+            <input type="hidden" name="request_id" value="{{ request[0] }}" />
+            <button type="submit" class="btn btn-success">Issue Book</button>
+          </form>
+        </td>
+      </tr>
+      <script>
+        // Event listener for form submission
+        $(document).ready(function () {
+          const formId = "#issueform{{ request[1] }}-{{ request[2] }}";
+          $(formId).submit(function (event) {
+            event.preventDefault();
+            // Log form data before submission
+            console.log("Request Form Data:", $(this).serialize());
+            // Submit the form
+            this.submit();
+          });
+        });
+      </script>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
