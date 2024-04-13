@@ -53,7 +53,10 @@ body %}
             <td>{{ book[1] }}</td>
             <td>{{ book[2] }}</td>
             <td>
-              <a href="#" class="btn btn-primary">Read</a>
+              <form method="POST">
+                <input type="hidden" name="title" value="{{ book[1] }}" />
+                <input type="submit" class="btn btn-primary" value="Read" />
+              </form>
               <a
                 href="{{ url_for('endpoints.revoke_book', username=username, book_id=book[0]) }}"
                 class="btn btn-danger"

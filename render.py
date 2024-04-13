@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, session, Blueprint, redirect, url_for, flash
+from flask import Flask, render_template, request, session, Blueprint, redirect, url_for, flash, current_app, send_file
 from datetime import datetime, timedelta
 import requests
+import os
 
 render = Blueprint('render', __name__)
 
-@render.route('/')
+@render.route('/', methods=['GET', 'POST'])
 def index():
     if 'username' in session:
         logged_in = True
@@ -13,6 +14,10 @@ def index():
         if is_admin:
             return redirect('/admin')
         else:
+            if request.method == 'POST':
+                title = request.form.get('title')
+                print("title: ", title)
+                return render_template('readbook.html', filename=title)
             response = requests.get(f'http://127.0.0.1:5000/api/books/borrowed/{username}')
             borrowed_books = response.json()
             print("borrowed_books: ", borrowed_books)
@@ -197,7 +202,11 @@ def manage_books():
                 book_desc = request.form.get('desc')
                 book_copies = request.form.get('copies')
 
-                print("book_title: ", book_title, "book_author: ", book_author, "book_section: ", book_section, "book_desc: ", book_desc, "book_copies: ", book_copies)
+                file = request.files['book']
+                save_path = os.path.join(current_app.config.get('UPLOAD_FOLDER'),file.filename)
+                file.save(save_path)
+
+                print("book_title: ", file.filename, "book_author: ", book_author, "book_section: ", book_section, "book_desc: ", book_desc, "book_copies: ", book_copies)
 
                 response = requests.post('http://127.0.0.1:5000/api/manage/books', json={'title': book_title, 'author': book_author, 'section_id': book_section, 'desc': book_desc, 'copies': book_copies, 'method': 'POST'})
                 
@@ -309,6 +318,20 @@ def books():
     else:
         flash('Please log in to view books.', 'error')
         return redirect('/login')
-
+    
+@render.route('/viewBook/<string:filename>', methods=['GET', 'POST'])
+def viewBook(filename):
+    print("filename: ", filename)
+    save_path = os.path.join(current_app.config.get('UPLOAD_FOLDER'),filename)
+    if not os.path.exists(save_path):
+        return "File not found", 404
+    
+    if not filename.lower().endswith('.pdf'):
+        return "Invalid file format", 400
+    
+    response = send_file(save_path, as_attachment=False)
+    response.headers['Content-Type'] = 'application/pdf'
+    
+    return response
 if __name__ == '__main__':
     render.run(debug=True)

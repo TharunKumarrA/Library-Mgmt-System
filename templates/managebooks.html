@@ -85,7 +85,7 @@ block body %}
           ></button>
         </div>
         <div class="modal-body">
-          <form id="addBookForm" method="POST">
+          <form id="addBookForm" method="POST" enctype="multipart/form-data">
             <div class="form-group">
               <label for="bookTitle">Title</label>
               <input
@@ -136,6 +136,17 @@ block body %}
                 id="bookCopies"
                 name="copies"
                 min="1"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="book">Upload Book</label>
+              <input
+                type="file"
+                class="form-control"
+                id="book"
+                name="book"
+                accept=".pdf"
                 required
               />
             </div>

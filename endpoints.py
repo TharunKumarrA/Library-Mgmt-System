@@ -239,6 +239,7 @@ def manage_books():
             conn.commit()
             cursor.close()
             conn.close()
+
             return 'Book added successfully', 200
 
         elif request.method == 'PUT':
@@ -418,6 +419,6 @@ def book_request():
         print(f"An error occurred: {e}")
         return 'Internal Server Error', 500
 
-    
+
 if __name__ == '__main__':
     ep.run(debug=True)
