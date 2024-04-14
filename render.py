@@ -314,13 +314,13 @@ def requests_page():
 @render.route('/books', methods=['GET', 'POST'])
 def books():
     if 'username' in session:
+        flag = 0
         if request.method == 'POST':
             # Ensure the user is logged in
             if 'username' not in session:
                 flash('Please log in to request books.', 'error')
                 return redirect('/login')
 
-            # Get form data
             book_id = request.form.get('book_id')
             username = session['username'][0]
             current_date = datetime.now().strftime('%d-%m-%Y')
@@ -328,30 +328,44 @@ def books():
 
             print("book_id: ", book_id, "username: ", username, "start_date: ", current_date, "end_date: ", till_date)
 
-            # Make request to API endpoint
-            response = requests.post('http://127.0.0.1:5000/api/books/request', json={'book_id': book_id, 'username': username, 'start_date': current_date, 'end_date': till_date})
+            check_count = requests.get('http://127.0.0.1:5000/api/request/getcount', json={'username': username})
+            print("check_count: ", check_count.json())
+            if check_count.json()['count'][0] >= 5:
+                flag = -1
 
-            # Check if request was successful
-            if response.status_code == 200:
-                flash('Book requested successfully.', 'success')
-            else:
-                flash('Failed to request book.', 'error')
+            check_already_requested = requests.get(f'http://127.0.0.1:5000/api/books/requests/{username}').json()
+            print("check_already_requested: ", check_already_requested)
+            for book in check_already_requested:
+                if book[0] == int(book_id):
+                    flag = -2
+                    print("Book already requested")
+                    break
+                    
+            if flag == 0:
+                response = requests.post('http://127.0.0.1:5000/api/books/request', json={'book_id': book_id, 'username': username, 'start_date': current_date, 'end_date': till_date})
 
-        # Get current date and till date
+                if response.status_code == 200:
+                    flash('Book requested successfully.', 'success')
+                else:
+                    flash('Failed to request book.', 'error')
+
         current_date = datetime.now().strftime('%d-%m-%Y')
         till_date = (datetime.now() + timedelta(days=14)).strftime('%d-%m-%Y')
 
-        # Make request to API to get book data
         response = requests.get('http://127.0.0.1:5000/api/books')
 
-        # Check if request was successful
         if response.status_code != 200:
             flash('Failed to fetch books data.', 'error')
             return redirect('/')
 
-        # Render template with book data
         books = response.json()
-        return render_template('books.html', books=books, current_date=current_date, till_date=till_date)
+        if flag == -1:
+            toast_message = 'You have already borrowed 5 books. Please return some books to borrow more.'
+        elif flag == -2:
+            toast_message = 'You have already requested this book. Please wait for approval.'
+        else:
+            toast_message = None
+        return render_template('books.html', books=books, current_date=current_date, till_date=till_date, toast_message=toast_message)
     else:
         flash('Please log in to view books.', 'error')
         return redirect('/login')

@@ -409,6 +409,44 @@ def get_requests():
         print(f"An error occurred: {e}")
         return 'Internal Server Error', 500
     
+@ep.route('/api/request/getcount', methods=['GET'])
+def get_count():
+    try:
+        data = request.json
+        if not data or 'username' not in data:
+            abort(400)
+        username = data.get('username')
+        conn = sqlite3.connect(database)
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM borrows WHERE username = ? AND status = 0', (username,))
+        count = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return jsonify({'count': count}), 200
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'Internal Server Error', 500
+    
+@ep.route('/api/books/requests/<string:username>', methods=['GET'])
+def user_book_requests(username):
+    try:
+        if username is None:
+            abort(400)
+
+        conn = sqlite3.connect(database)
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT books.id, books.title, books.author FROM borrows JOIN books ON borrows.book_id = books.id WHERE borrows.username = ?', (username,)) 
+        borrowed_books = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(borrowed_books), 200
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'Internal Server Error', 500
+    
 @ep.route('/api/books/borrowed/<string:username>', methods=['GET'])
 def borrowed_books(username):
     try:

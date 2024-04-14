@@ -98,6 +98,28 @@ block body %}
       {% endfor %}
     </tbody>
   </table>
+  <!-- Display toast message if present -->
+  {% if toast_message %}
+  <div
+    class="toast align-items-center text fixed-bottom start-50 translate-middle-x text-bg-primary border-0"
+    role="alert"
+    aria-live="polite"
+    aria-atomic="true"
+    id="liveToast"
+    style="margin-bottom: 16px"
+  >
+    <div class="d-flex">
+      <div class="toast-body" id="liveToastBody"></div>
+      <button
+        type="button"
+        class="btn-close btn-close-white me-2 m-auto"
+        data-bs-dismiss="toast"
+        aria-label="Close"
+        id="liveToastClose"
+      ></button>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -121,6 +143,19 @@ block body %}
       });
     });
   });
+
+  window.onload = function () {
+    display_toast("{{ toast_message }}");
+  };
+  function display_toast(message) {
+    const toastLiveExample = document.getElementById("liveToast");
+    const toastLiveBody = document.getElementById("liveToastBody");
+    toastLiveBody.innerText = message;
+    const toastBootstrap =
+      bootstrap.Toast.getOrCreateInstance(toastLiveExample);
+    toastBootstrap.show();
+    console.log("Toast displayed");
+  }
 </script>
 
 {% endblock %}
