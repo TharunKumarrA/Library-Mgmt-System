@@ -87,13 +87,25 @@ block body %}
         <div class="modal-body">
           <form id="addBookForm" method="POST" enctype="multipart/form-data">
             <div class="form-group">
+              <label for="book">Upload Book</label>
+              <input
+                type="file"
+                class="form-control"
+                id="book"
+                name="book"
+                accept=".pdf"
+                onchange="updateTitle()"
+                required
+              />
+            </div>
+            <div class="form-group">
               <label for="bookTitle">Title</label>
               <input
                 type="text"
                 class="form-control"
                 id="bookTitle"
                 name="title"
-                required
+                value=""
               />
             </div>
             <div class="form-group">
@@ -136,17 +148,6 @@ block body %}
                 id="bookCopies"
                 name="copies"
                 min="1"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="book">Upload Book</label>
-              <input
-                type="file"
-                class="form-control"
-                id="book"
-                name="book"
-                accept=".pdf"
                 required
               />
             </div>
@@ -362,6 +363,15 @@ block body %}
       });
     });
   });
+
+  function updateTitle() {
+    // Get the file input
+    var inputFile = document.getElementById("book");
+    // Get the file name without extension
+    var fileName = inputFile.files[0].name.replace(".pdf", "");
+    // Set the value of the title input
+    document.getElementById("bookTitle").value = fileName;
+  }
 </script>
 
 {% endblock %}

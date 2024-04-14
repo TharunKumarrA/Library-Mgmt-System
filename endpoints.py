@@ -46,7 +46,7 @@ def login():
                 isadmin = True
             return jsonify({'message': 'Login successful', 'isAdmin': isadmin}), 200
         else:
-            abort(401)
+            return jsonify({'message': 'Invalid Credentials'}), 401  # Unauthorized
     except Exception as e:
         print(f"An error occurred during login: {e}")
         abort(500)  # Internal server error
@@ -74,9 +74,13 @@ def register():
         conn.close()
 
         return 'Registration successful', 200
+    except sqlite3.IntegrityError:
+        print("User already exists")
+        abort(409)  # Conflict
+    
     except Exception as e:
         print(f"An error occurred: {e}")
-        abort(500)
+        abort(500)  # Internal server error
 
 @ep.route('/api/profile', methods=['GET', 'POST'])
 def get_user_data():
@@ -145,6 +149,28 @@ def get_books():
         conn.close()
 
         return jsonify(books), 200
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 'Internal Server Error', 500
+    
+@ep.route('/api/books/<int:id>', methods=['GET'])
+def get_book(id):
+    try:
+        if not id:
+            abort(400)
+        conn = sqlite3.connect(database)
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT * FROM books WHERE id = ?', (id,))
+        book = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if book:
+            return jsonify(book), 200
+        else:
+            return 'Book not found', 404
     except Exception as e:
         print(f"An error occurred: {e}")
         return 'Internal Server Error', 500
@@ -310,14 +336,26 @@ def issue_book():
             abort(400)
 
         request_id = data.get('request_id')
-
         conn = sqlite3.connect(database)
         cursor = conn.cursor()
 
+        # Check if the book is available for borrowing
+        cursor.execute('SELECT book_id FROM borrows WHERE id = ?', (request_id,))
+        book_id = cursor.fetchone()
+        if not book_id:
+            return 'Book request not found', 404
+        # Get the current number of copies of the book
+        cursor.execute('SELECT copies FROM books WHERE id = ?', (book_id[0],))
+        copies = cursor.fetchone()[0]
+        # Check if there are available copies to issue
+        if copies <= 0:
+            return 'No copies available for borrowing', 400
         # Update the status of the borrow record to 1 (issued)
         cursor.execute('UPDATE borrows SET status = 1 WHERE id = ?', (request_id,))
-        conn.commit()
+        # Update the book copies count
+        cursor.execute('UPDATE books SET copies = copies - 1 WHERE id = ?', (book_id[0],))
 
+        conn.commit()
         cursor.close()
         conn.close()
 
@@ -334,10 +372,12 @@ def revoke_book(username, book_id):
 
         conn = sqlite3.connect(database)
         cursor = conn.cursor()
-
+        # Delete the borrow record
         cursor.execute('DELETE FROM borrows WHERE username = ? AND book_id = ?', (username, book_id))
-        conn.commit()
+        # Update the book copies count
+        cursor.execute('UPDATE books SET copies = copies + 1 WHERE id = ?', (book_id,))
 
+        conn.commit()
         cursor.close()
         conn.close()
 
@@ -358,7 +398,6 @@ def get_requests():
                    books.title, books.author, books.copies
             FROM borrows
             JOIN books ON borrows.book_id = books.id
-            WHERE borrows.status = 0
         ''')
         requests_data = cursor.fetchall()
 
@@ -419,6 +458,35 @@ def book_request():
         print(f"An error occurred: {e}")
         return 'Internal Server Error', 500
 
+@ep.route('/api/search', methods=['POST', 'GET'])
+def search():
+    try:
+      with sqlite3.connect("database.db") as con:
+        data = request.json
+        if not data or 'title' not in data or 'author' not in data or 'section' not in data:
+            abort(400)
+        cur = con.cursor()
+        title = data.get('title')
+        author = data.get('author')
+        section = data.get('section')
 
+        print(title, author, section)
+
+        title = '' if title == None else title
+        author = '' if author == None else author
+        section = '' if section == None else section
+
+        book_search = title + '%'
+        author_search = author + '%'
+        section_search = section + '%'
+
+        cur.execute("SELECT b.id,b.title,b.author,s.name FROM Books as b JOIN Sections as s ON s.id = b.section_id WHERE b.title LIKE ? AND b.author LIKE ? AND s.name LIKE ?",(book_search, author_search, section_search))
+
+        data = cur.fetchall()
+        return jsonify({'books': data}), 200
+      
+    except Exception as e:
+      print("Internal Server Error: ",e)
+      abort(500)
 if __name__ == '__main__':
     ep.run(debug=True)

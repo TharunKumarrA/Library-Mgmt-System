@@ -8,7 +8,6 @@ block body %}
         <th>Title</th>
         <th>Author</th>
         <th>Copies Present</th>
-        <th>Current Feedback (Rating)</th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -18,7 +17,6 @@ block body %}
         <td>{{ book[1] }}</td>
         <td>{{ book[2] }}</td>
         <td>{{ book[5] }}</td>
-        <td>{{ book[6] }}</td>
         <td>
           <button
             class="btn btn-primary"
@@ -26,13 +24,6 @@ block body %}
             data-bs-target="#requestModal{{ book[0] }}"
           >
             Request
-          </button>
-          <button
-            class="btn btn-info"
-            data-bs-toggle="modal"
-            data-bs-target="#feedbackModal{{ book[0] }}"
-          >
-            Feedback
           </button>
         </td>
       </tr>
@@ -104,77 +95,6 @@ block body %}
           </div>
         </div>
       </div>
-
-      <!-- Feedback Modal for Book {{ book.id }} -->
-      <div
-        class="modal fade"
-        id="feedbackModal{{ book[0] }}"
-        tabindex="-1"
-        aria-labelledby="feedbackModalLabel{{ book[0] }}"
-        aria-hidden="true"
-        data-book-id="{{ book[0] }}"
-      >
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="feedbackModalLabel{{ book[0] }}">
-                Feedback for {{ book[1] }}
-              </h5>
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              ></button>
-            </div>
-            <div class="modal-body">
-              <!-- Feedback Form -->
-              <form id="feedbackForm{{ book[0] }}" method="POST">
-                <input type="hidden" name="action" value="feedback" />
-                <!-- Hidden input for action -->
-                <div class="mb-3">
-                  <label for="rating{{ book[0] }}" class="form-label"
-                    >Rating</label
-                  >
-                  <input
-                    type="number"
-                    class="form-control"
-                    id="rating{{ book[0] }}"
-                    min="1"
-                    max="5"
-                  />
-                </div>
-                <div class="mb-3">
-                  <label for="remark{{ book[0] }}" class="form-label"
-                    >Remark (Optional)</label
-                  >
-                  <textarea
-                    class="form-control"
-                    id="remark{{ book[0] }}"
-                    rows="3"
-                  ></textarea>
-                </div>
-              </form>
-            </div>
-            <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
-                Close
-              </button>
-              <button
-                type="submit"
-                form="feedbackForm{{ book[0] }}"
-                class="btn btn-danger"
-              >
-                Submit
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
       {% endfor %}
     </tbody>
   </table>
@@ -195,23 +115,6 @@ block body %}
 
         // Log form data before submission
         console.log("Request Form Data:", $(this).serialize());
-
-        // Submit the form
-        this.submit();
-      });
-    });
-
-    // Event listener for "Feedback" button in Feedback Modal
-    $("[id^=feedbackModal]").on("shown.bs.modal", function () {
-      var bookId = $(this).data("book-id");
-      var formId = "#feedbackForm" + bookId;
-
-      // Event listener for form submission
-      $(formId).submit(function (event) {
-        event.preventDefault();
-
-        // Log form data before submission
-        console.log("Feedback Form Data:", $(this).serialize());
 
         // Submit the form
         this.submit();

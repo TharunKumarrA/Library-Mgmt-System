@@ -28,10 +28,14 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
           <div class="navbar-nav">
-            <a class="nav-link active" aria-current="page" href="#">Home</a>
+            <a
+              class="nav-link active"
+              aria-current="page"
+              href="{{ ur;_for('render.index') }}"
+              >Home</a
+            >
             <a class="nav-link" href="{{ url_for('render.books') }}">Books</a>
-            <a class="nav-link" href="#">Sections</a>
-            <a class="nav-link" href="#">Sections</a>
+            <a class="nav-link" href="{{ url_for('render.search') }}">Search</a>
             {% if 'username' in session %}
             <a class="nav-link" href="{{ url_for('render.profile') }}"
               >Profile</a
@@ -40,8 +44,12 @@
               >Log out</a
             >
             {% else %}
-            <a class="nav-link" href="{{ url_for('render.render_login_page') }}">Login</a>
-            <a class="nav-link" href="{{ url_for('render.render_register_page') }}"
+            <a class="nav-link" href="{{ url_for('render.render_login_page') }}"
+              >Login</a
+            >
+            <a
+              class="nav-link"
+              href="{{ url_for('render.render_register_page') }}"
               >Register</a
             >
             {% endif %}
