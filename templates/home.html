@@ -3,9 +3,7 @@ body %}
 <div class="container">
   <div class="row mt-5">
     <!-- Welcome and Request Book section -->
-    <div
-      class="col-md-6 d-flex flex-column justify-content-start align-items-start"
-    >
+    <div class="col-md-6">
       <!-- Welcome section -->
       <div>
         <h1>Welcome to the Library</h1>
@@ -24,18 +22,25 @@ body %}
         >
       </div>
 
-      <!-- Continue Reading section -->
+      <!-- Quote section -->
       <div class="mt-5">
-        <h2>Continue Reading</h2>
-        <p>You were reading:</p>
-        <p>{{ last_read_book }}</p>
-        <a href="#" class="btn btn-primary">Continue</a>
+        <figure class="text-center">
+          <blockquote class="blockquote">
+            <p>
+              There is more treasure in books than in all the pirate's loot on
+              Treasure Island.
+            </p>
+          </blockquote>
+          <figcaption class="blockquote-footer">
+            WALT DISNEY<cite title="Source Title"></cite>
+          </figcaption>
+        </figure>
       </div>
     </div>
 
     <!-- Books in Hand section -->
     <div class="col-md-6">
-      <h2>Books in Hand</h2>
+      <h2 class="text">Books in Hand</h2>
       <p>Here are the books you currently have borrowed:</p>
       <table class="table table-bordered">
         <thead>
@@ -57,11 +62,12 @@ body %}
                 <input type="hidden" name="title" value="{{ book[1] }}" />
                 <input type="submit" class="btn btn-primary" value="Read" />
               </form>
-              <a
-                href="{{ url_for('endpoints.revoke_book', username=username, book_id=book[0]) }}"
+              <button
                 class="btn btn-danger"
-                >Revoke</a
+                onclick="revokeBook('{{ username }}', '{{ book[0] }}')"
               >
+                Revoke
+              </button>
             </td>
           </tr>
           {% endfor %}
@@ -72,16 +78,13 @@ body %}
 </div>
 
 <script>
-  function fetchData() {
-    fetch(
-      `https://127.0.0.1:5000/api/revoke?username=${username}&book_id=${book[0]}`,
-      {
-        method: "DELETE",
-      }
-    )
+  function revokeBook(username, bookId) {
+    fetch(`/api/revoke/${username}/${bookId}`, {
+      method: "POST",
+    })
       .then((response) => {
-        if (response.status === 200) {
-          window.location.href = "/";
+        if (response.ok) {
+          window.location.href = "/"; // Redirect to the home page
         }
       })
       .catch((error) => {
@@ -89,4 +92,5 @@ body %}
       });
   }
 </script>
+
 {% endblock %}

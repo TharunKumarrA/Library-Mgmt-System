@@ -15,8 +15,6 @@ CREATE TABLE IF NOT EXISTS books (
     section_id INTEGER NOT NULL,
     description TEXT,
     copies INTEGER NOT NULL,
-    rating REAL DEFAULT 0,
-    ratingCount INTEGER DEFAULT 0,
     CONSTRAINT section_fk FOREIGN KEY (section_id) REFERENCES sections(id)
 );
 

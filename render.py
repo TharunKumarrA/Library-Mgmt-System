@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, session, Blueprint, redirect, url_for, flash, current_app, send_file
 from datetime import datetime, timedelta
 import requests
-import os
+import os, time
 
 render = Blueprint('render', __name__)
 
@@ -39,9 +39,17 @@ def render_login_page():
             session['username'] = username, isadmin
             return redirect('/')
         else:
-            return 'login failed'
+            # Show toast message with login failure
+            if response.status_code == 401:
+                login_failed_toast = 'Invalid username or password. Please try again.'
+                
+            elif response.status_code == 404:
+                login_failed_toast = 'User not found. Please register.'
+            elif response.status_code == 500:
+                login_failed_toast = 'Internal server error. Please try again later.'
+            return render_template('login.html', toast_message=login_failed_toast)
     else:
-        return render_template('login.html')
+        return render_template('login.html', toast_message=None)
 
 @render.route('/register', methods=['GET', 'POST'])
 def render_register_page():
@@ -52,14 +60,21 @@ def render_register_page():
         isAdmin = request.form.get('isAdmin')
 
         response = requests.post('http://127.0.0.1:5000/api/register', json={'username': username, 'name':name, 'password': password, 'isAdmin': isAdmin})
-
+        
+        print("response: ", response.status_code)
         if response.status_code == 200:
             return redirect('/login')
         else:
-            return f'registration failed {response.status_code}'
+            if response.status_code == 409:
+                toast_message = 'Username already exists. Please try again with a different username.'
+            elif response.status_code == 500:
+                toast_message = 'Internal server error. Please try again later.'
+                
+            print('toast_message: ', toast_message)
+            return render_template('register.html', toast_message=toast_message)
     else:
-        return render_template('register.html')
-
+        return render_template('register.html', toast_message=None)
+    
 @render.route('/logout')
 def logout():
     session.pop('username', None)
@@ -80,8 +95,14 @@ def profile():
 
             if response.status_code == 200:
                 flash('Profile updated successfully.', 'success')
+                toast_message = 'Profile updated successfully.'
+                return render_template('profile.html', username=username, name=name, email=email, bio=bio, toast_message=toast_message)
             else:
-                flash('Failed to update profile.', 'error')
+                if response.status_code == 404:
+                    toast_message = 'User not found. Please try again.'
+                elif response.status_code == 500:
+                    toast_message = 'Internal server error. Please try again later.'
+                return render_template('profile.html', username=username, name=name, email=email, bio=bio, toast_message=toast_message)
 
         # Send a GET request to fetch user data
         response = requests.post('http://127.0.0.1:5000/api/profile', json={'username': username})
@@ -93,10 +114,10 @@ def profile():
             email = user_data[3]
             bio = user_data[4]
             
-            return render_template('profile.html', username=username, name=name, email=email, bio=bio)
+            return render_template('profile.html', username=username, name=name, email=email, bio=bio, toast_message=None)
         else:
             flash('Failed to fetch user data.', 'error')
-            return render_template('profile.html', username=username)  
+            return render_template('profile.html', username=username, toast_message=None)  
         
     flash('Please log in to view your profile.', 'error')
     return redirect('/login')
@@ -154,7 +175,7 @@ def manage_section():
 
         sections = requests.get('http://127.0.0.1:5000/api/sections').json()
         print(sections)
-        return render_template('managesections.html', sections=sections)
+        return render_template('managesections.html', sections=sections, toast_message=None)
     else:
         return redirect('/login')
     
@@ -186,11 +207,19 @@ def manage_books():
                 # Delete book
                 book_id = request.form.get('delete_book_id')
                 print("book_id: ", book_id)
+                response = requests.get(f'http://127.0.0.1:5000/api/books/{book_id}')
+                book = response.json()
+                print("book: ", book)
+                file = book[1] + '.pdf'
+                save_path = os.path.join(current_app.config.get('UPLOAD_FOLDER'),file)
 
                 response = requests.delete('http://127.0.0.1:5000/api/manage/books', json={'id': book_id, 'method': 'DELETE'})
 
                 if response.status_code == 200:
                     flash('Book deleted successfully.', 'success')
+                    if os.path.exists(save_path):
+                        os.remove(save_path)
+
                 else:
                     flash('Failed to delete book.', 'error')
             
@@ -204,13 +233,13 @@ def manage_books():
 
                 file = request.files['book']
                 save_path = os.path.join(current_app.config.get('UPLOAD_FOLDER'),file.filename)
-                file.save(save_path)
 
                 print("book_title: ", file.filename, "book_author: ", book_author, "book_section: ", book_section, "book_desc: ", book_desc, "book_copies: ", book_copies)
 
                 response = requests.post('http://127.0.0.1:5000/api/manage/books', json={'title': book_title, 'author': book_author, 'section_id': book_section, 'desc': book_desc, 'copies': book_copies, 'method': 'POST'})
                 
                 if response.status_code == 200:
+                    file.save(save_path)
                     flash('Book created successfully.', 'success')
                 else:
                     flash('Failed to create book.', 'error')
@@ -254,9 +283,17 @@ def requests_page():
         username = session['username'][0]
 
         if request.method == 'POST':
-            request_id = request.form.get('request_id')
+            request_action = request.form.get('action')
 
-            response = requests.post('http://127.0.0.1:5000/api/issue', json={'request_id': request_id})
+            if request_action == 'ISSUE':
+                request_id = request.form.get('request_id')
+
+                response = requests.post('http://127.0.0.1:5000/api/issue', json={'request_id': request_id})
+            elif request_action == 'REVOKE':
+                username = request.form.get('username')
+                book_id = request.form.get('book_id')
+
+                response = requests.post(f'http://127.0.0.1:5000/api/revoke/{username}/{book_id}')
 
         # Fetch requests data
         response = requests.get('http://127.0.0.1:5000/api/requests', json={'username': username})
@@ -277,13 +314,13 @@ def requests_page():
 @render.route('/books', methods=['GET', 'POST'])
 def books():
     if 'username' in session:
+        flag = 0
         if request.method == 'POST':
             # Ensure the user is logged in
             if 'username' not in session:
                 flash('Please log in to request books.', 'error')
                 return redirect('/login')
 
-            # Get form data
             book_id = request.form.get('book_id')
             username = session['username'][0]
             current_date = datetime.now().strftime('%d-%m-%Y')
@@ -291,30 +328,44 @@ def books():
 
             print("book_id: ", book_id, "username: ", username, "start_date: ", current_date, "end_date: ", till_date)
 
-            # Make request to API endpoint
-            response = requests.post('http://127.0.0.1:5000/api/books/request', json={'book_id': book_id, 'username': username, 'start_date': current_date, 'end_date': till_date})
+            check_count = requests.get('http://127.0.0.1:5000/api/request/getcount', json={'username': username})
+            print("check_count: ", check_count.json())
+            if check_count.json()['count'][0] >= 5:
+                flag = -1
 
-            # Check if request was successful
-            if response.status_code == 200:
-                flash('Book requested successfully.', 'success')
-            else:
-                flash('Failed to request book.', 'error')
+            check_already_requested = requests.get(f'http://127.0.0.1:5000/api/books/requests/{username}').json()
+            print("check_already_requested: ", check_already_requested)
+            for book in check_already_requested:
+                if book[0] == int(book_id):
+                    flag = -2
+                    print("Book already requested")
+                    break
+                    
+            if flag == 0:
+                response = requests.post('http://127.0.0.1:5000/api/books/request', json={'book_id': book_id, 'username': username, 'start_date': current_date, 'end_date': till_date})
 
-        # Get current date and till date
+                if response.status_code == 200:
+                    flash('Book requested successfully.', 'success')
+                else:
+                    flash('Failed to request book.', 'error')
+
         current_date = datetime.now().strftime('%d-%m-%Y')
         till_date = (datetime.now() + timedelta(days=14)).strftime('%d-%m-%Y')
 
-        # Make request to API to get book data
         response = requests.get('http://127.0.0.1:5000/api/books')
 
-        # Check if request was successful
         if response.status_code != 200:
             flash('Failed to fetch books data.', 'error')
             return redirect('/')
 
-        # Render template with book data
         books = response.json()
-        return render_template('books.html', books=books, current_date=current_date, till_date=till_date)
+        if flag == -1:
+            toast_message = 'You have already borrowed 5 books. Please return some books to borrow more.'
+        elif flag == -2:
+            toast_message = 'You have already requested this book. Please wait for approval.'
+        else:
+            toast_message = None
+        return render_template('books.html', books=books, current_date=current_date, till_date=till_date, toast_message=toast_message)
     else:
         flash('Please log in to view books.', 'error')
         return redirect('/login')
@@ -322,6 +373,7 @@ def books():
 @render.route('/viewBook/<string:filename>', methods=['GET', 'POST'])
 def viewBook(filename):
     print("filename: ", filename)
+    filename = filename + '.pdf'
     save_path = os.path.join(current_app.config.get('UPLOAD_FOLDER'),filename)
     if not os.path.exists(save_path):
         return "File not found", 404
@@ -333,5 +385,30 @@ def viewBook(filename):
     response.headers['Content-Type'] = 'application/pdf'
     
     return response
+
+@render.route('/search', methods=['GET', 'POST'])
+def search():
+    if 'username' in session:
+        if request.method == 'POST':
+            # Get the search criteria from the form
+            title = request.form.get('title')
+            author = request.form.get('author')
+            section = request.form.get('section')
+
+            response = requests.get('http://127.0.0.1:5000/api/search', json=({'title': title, 'author': author, 'section': section}))
+
+            # Check if the request was successful
+            if response.status_code == 200:
+                books = response.json()['books']
+                print('search books: ', books)
+                return render_template('search.html', books=books)
+            else:
+                return render_template('search.html', books=None)
+        else:
+            books = requests.get('http://127.0.0.1:5000/api/books').json()
+            return render_template('search.html', books=books)
+    else:
+        # If the user is not logged in, redirect to the login page
+        return redirect('/login')
 if __name__ == '__main__':
     render.run(debug=True)
